@@ -1,0 +1,8 @@
+name: depths
+
+services:
+  web:
+    build: .
+    ports:
+      - "${HOST_BIND:-127.0.0.1}:${PORT:-4844}:80"
+    restart: unless-stopped
