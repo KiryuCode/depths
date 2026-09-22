@@ -224,4 +224,8 @@ html, body {
 /* StarCraft cursors from sprite-sheet-processor (Dark Templar) — hide OS cursor over sea */
 #sea {
   cursor: none;
+  touch-action: none;
+}
+#sea:active {
+  cursor: none;
 }

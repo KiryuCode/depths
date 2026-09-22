@@ -25,6 +25,7 @@
   const cursorSheets = { arrows: null, target: null, enemy: null };
   let cursorFrame = 0, cursorAcc = 0;
   let cursorsReady = false;
+  let hitFlash = null; // {x,y,age,life}
 
   function loadCursors() {
     const ids = ["arrows", "target", "enemy"];
@@ -42,7 +43,7 @@
   }
 
   function fishHitRadius(f) {
-    return Math.max(14, f.size * 0.65);
+    return Math.max(22, f.size * 0.85);
   }
 
   function pickFishAt(x, y) {
@@ -68,9 +69,10 @@
     f.facingDir = f.vx >= 0 ? 1 : -1;
     f.vx = 0;
     f.vy = 0;
-    f.sink = 40 + Math.random() * 50;
+    f.sink = 55 + Math.random() * 45;
     f.leader = null;
-    statusEl.textContent = "Caught · sinking";
+    hitFlash = { x: f.x, y: f.y, age: 0, life: 0.35, r: f.size * 0.7 };
+    statusEl.textContent = "Hit · sinking belly-up";
   }
 
   function drawCrosshair(ctx) {
@@ -80,17 +82,59 @@
     if (!img || !img.naturalWidth) return;
     const n = Math.max(1, Math.round(img.naturalWidth / CURSOR_CELL.w));
     const fr = cursorFrame % n;
-    const scale = 2;
+    const pulse = hoverFish ? 1 + Math.sin(t * 10) * 0.06 : 1;
+    const scale = 2.15 * pulse;
     const dw = CURSOR_CELL.w * scale;
     const dh = CURSOR_CELL.h * scale;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
+    // soft aim glow when locked on a fish
+    if (hoverFish) {
+      const g = ctx.createRadialGradient(mx, my, 4, mx, my, 28);
+      g.addColorStop(0, "rgba(255, 120, 80, 0.28)");
+      g.addColorStop(1, "rgba(255, 80, 40, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(mx, my, 28, 0, Math.PI * 2);
+      ctx.fill();
+    }
     // hotspot ~ (8,8) in sheet coords like darktemplar player
     ctx.drawImage(
       img,
       fr * CURSOR_CELL.w, 0, CURSOR_CELL.w, CURSOR_CELL.h,
       mx - 8 * scale, my - 8 * scale, dw, dh
     );
+    ctx.restore();
+  }
+
+  function drawHoverOutline(ctx) {
+    if (!hoverFish || hoverFish.dead) return;
+    const f = hoverFish;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 210, 140, 0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y, f.size * 0.7, f.size * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHitFlash(ctx) {
+    if (!hitFlash) return;
+    const u = hitFlash.age / hitFlash.life;
+    if (u >= 1) return;
+    const a = (1 - u) * 0.55;
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    const g = ctx.createRadialGradient(hitFlash.x, hitFlash.y, 2, hitFlash.x, hitFlash.y, hitFlash.r * (1 + u));
+    g.addColorStop(0, `rgba(255, 240, 200, ${a})`);
+    g.addColorStop(0.5, `rgba(120, 200, 255, ${a * 0.4})`);
+    g.addColorStop(1, "rgba(80, 160, 220, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(hitFlash.x, hitFlash.y, hitFlash.r * (1 + u * 1.4), 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
@@ -209,6 +253,10 @@
       if (f.x < -120) f.x = w + 120;
       f.y = R.clamp(f.y, h * 0.08, h * 0.82);
     }
+    if (hitFlash) {
+      hitFlash.age += dt;
+      if (hitFlash.age >= hitFlash.life) hitFlash = null;
+    }
     hoverFish = pointerIn ? pickFishAt(mx, my) : null;
     cursorAcc += dt;
     const fps = hoverFish ? 12 : 8;
@@ -257,12 +305,14 @@
       }
       const sorted = world.fish.slice().sort((a, b) => a.y - b.y);
       for (const f of sorted) R.drawFish(ctx, f, t);
+      drawHoverOutline(ctx);
       for (const p of world.props) {
         if (p.kind === "bubbles") R.drawProp(ctx, p, t, h);
       }
     }
 
     R.drawFloor(ctx, w, h);
+    drawHitFlash(ctx);
     drawCrosshair(ctx);
 
     if (fade < 1) {
