@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Depths — Underwater Viewing | Ocean Market</title>
+  <meta name="description" content="Look up from under the water — ten sites, swimming fish, swaying plants." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <canvas id="sea" aria-label="Underwater scene"></canvas>
+
+    <header class="chrome top">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">◈</span>
+        <div>
+          <h1>Depths</h1>
+          <p class="tagline">Ocean Market · look up from below</p>
+        </div>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </header>
+
+    <aside class="dock" id="dock" aria-label="Dive sites">
+      <h2 class="dock-title">Dive sites</h2>
+      <div class="dock-list" id="locationList" role="listbox" aria-label="Locations"></div>
+    </aside>
+
+    <footer class="chrome bottom">
+      <p id="locMeta" class="loc-meta"></p>
+      <button type="button" class="btn-ghost" id="toggleDock" aria-expanded="true">Sites</button>
+    </footer>
+  </div>
+  <script src="js/locations.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
