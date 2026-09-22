@@ -94,57 +94,89 @@
 
   function drawRays(ctx, w, h, t, opacity) {
     if (opacity <= 0.01) return;
+    // Soft volumetric shafts — wide, low-alpha, slow drift (no hard flashlight cones)
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    for (let i = 0; i < 7; i++) {
-      const x = ((i / 7) * w + Math.sin(t * 0.15 + i) * 40) % w;
-      const g = ctx.createLinearGradient(x, 0, x + 40, h * 0.7);
-      g.addColorStop(0, `rgba(200, 240, 255, ${opacity * 0.55})`);
-      g.addColorStop(1, "rgba(200, 240, 255, 0)");
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 5; i++) {
+      const cx = w * (0.08 + i * 0.21) + Math.sin(t * 0.07 + i * 1.4) * 28;
+      const topW = 18 + i * 6;
+      const botW = 110 + i * 36;
+      const g = ctx.createLinearGradient(cx, 0, cx + Math.sin(t * 0.05 + i) * 20, h * 0.88);
+      g.addColorStop(0, `rgba(210, 236, 255, ${opacity * 0.11})`);
+      g.addColorStop(0.28, `rgba(170, 215, 240, ${opacity * 0.045})`);
+      g.addColorStop(1, "rgba(120, 180, 210, 0)");
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.moveTo(x - 10, 0);
-      ctx.lineTo(x + 28 + Math.sin(t * 0.3 + i) * 12, 0);
-      ctx.lineTo(x + 90, h * 0.75);
-      ctx.lineTo(x - 50, h * 0.75);
+      ctx.moveTo(cx - topW, 0);
+      ctx.lineTo(cx + topW, 0);
+      ctx.lineTo(cx + botW, h * 0.92);
+      ctx.lineTo(cx - botW, h * 0.92);
       ctx.closePath();
       ctx.fill();
     }
+    // faint surface sheet
+    const sheet = ctx.createLinearGradient(0, 0, 0, h * 0.22);
+    sheet.addColorStop(0, `rgba(220, 245, 255, ${opacity * 0.14})`);
+    sheet.addColorStop(1, "rgba(220, 245, 255, 0)");
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.fillStyle = sheet;
+    ctx.fillRect(0, 0, w, h * 0.22);
     ctx.restore();
   }
 
   function drawCaustics(ctx, w, h, t, opacity) {
     if (opacity <= 0.01) return;
+    // Soft ripple-projection shimmer — wavy bands, not drifting circles
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = opacity;
-    for (let i = 0; i < 5; i++) {
-      const ox = Math.sin(t * 0.4 + i * 1.7) * 60;
-      const oy = Math.cos(t * 0.35 + i) * 30;
-      const g = ctx.createRadialGradient(
-        w * (0.15 + i * 0.18) + ox,
-        h * (0.25 + (i % 3) * 0.15) + oy,
-        10,
-        w * (0.15 + i * 0.18) + ox,
-        h * (0.25 + (i % 3) * 0.15) + oy,
-        120 + i * 20
-      );
-      g.addColorStop(0, "rgba(180, 230, 255, 0.35)");
-      g.addColorStop(0.5, "rgba(120, 200, 230, 0.08)");
-      g.addColorStop(1, "rgba(80, 160, 200, 0)");
-      ctx.fillStyle = g;
+    ctx.globalCompositeOperation = "screen";
+
+    ctx.globalAlpha = opacity * 0.5;
+    for (let band = 0; band < 9; band++) {
+      const y0 = h * (0.12 + band * 0.075);
       ctx.beginPath();
-      ctx.ellipse(
-        w * (0.15 + i * 0.18) + ox,
-        h * (0.28 + (i % 3) * 0.12) + oy,
-        90 + Math.sin(t + i) * 20,
-        40 + Math.cos(t * 0.8 + i) * 10,
-        t * 0.2 + i,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
+      for (let x = 0; x <= w; x += 6) {
+        const y =
+          y0 +
+          Math.sin(x * 0.011 + t * 0.55 + band * 0.9) * 5.5 +
+          Math.sin(x * 0.028 - t * 0.35 + band) * 2.8;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = `rgba(200, 235, 255, ${0.12 + (band % 3) * 0.03})`;
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = "round";
+      ctx.stroke();
     }
+
+    ctx.globalAlpha = opacity * 0.28;
+    for (let band = 0; band < 6; band++) {
+      const y0 = h * (0.18 + band * 0.1);
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += 8) {
+        const y =
+          y0 +
+          Math.sin(x * 0.018 + t * 0.32 + band * 1.7) * 12 +
+          Math.cos(x * 0.007 + t * 0.18) * 7;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = "rgba(150, 210, 235, 0.18)";
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+
+    // very soft depth fade of the shimmer
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "destination-in";
+    // can't easily clip with destination-in on full canvas without offscreen —
+    // instead overlay a gentle darken at depth with multiply
+    ctx.globalCompositeOperation = "source-over";
+    const fade = ctx.createLinearGradient(0, h * 0.35, 0, h);
+    fade.addColorStop(0, "rgba(0,0,0,0)");
+    fade.addColorStop(1, "rgba(0, 12, 20, 0.12)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, h * 0.35, w, h * 0.65);
+
     ctx.restore();
   }
 
