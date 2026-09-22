@@ -221,7 +221,7 @@ html, body {
 }
 
 
-/* StarCraft cursors from sprite-sheet-processor (Dark Templar) — hide OS cursor over sea */
+/* Custom canvas reticle — hide OS cursor over the sea */
 #sea {
   cursor: none;
   touch-action: none;
