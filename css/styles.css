@@ -1,0 +1,204 @@
+/* Depths — skin hooks for bb5 (caustics / palettes).
+   CSS variables drive water tint, chrome, and dock. Canvas reads --water-* via JS. */
+
+:root {
+  /* Palette / water (overridden per location via JS on :root) */
+  --water-top: #1a6a8a;
+  --water-mid: #0c3d55;
+  --water-deep: #041820;
+  --water-tint: rgba(20, 120, 160, 0.35);
+  --caustic-opacity: 0.22;
+  --caustic-speed: 1;
+  --ray-opacity: 0.18;
+  --bubble-opacity: 0.45;
+
+  /* Chrome UI */
+  --chrome-bg: rgba(4, 18, 28, 0.55);
+  --chrome-border: rgba(160, 220, 255, 0.18);
+  --chrome-text: #e8f6ff;
+  --chrome-muted: rgba(200, 230, 245, 0.7);
+  --accent: #5ec8e8;
+  --accent-soft: rgba(94, 200, 232, 0.25);
+  --dock-width: min(280px, 86vw);
+  --font-ui: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --radius: 14px;
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--water-deep);
+  color: var(--chrome-text);
+  font-family: var(--font-ui);
+}
+
+.app { position: relative; width: 100%; height: 100%; }
+
+#sea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: linear-gradient(180deg, var(--water-top), var(--water-mid) 45%, var(--water-deep));
+}
+
+.chrome {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+}
+
+.chrome.top { top: 0; }
+.chrome.bottom { bottom: 0; }
+
+.brand {
+  pointer-events: auto;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+.brand-mark {
+  font-size: 1.4rem;
+  color: var(--accent);
+  text-shadow: 0 0 18px var(--accent-soft);
+}
+.brand h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.tagline {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  color: var(--chrome-muted);
+}
+
+.status {
+  pointer-events: none;
+  font-size: 0.8rem;
+  color: var(--chrome-muted);
+  padding: 0.4rem 0.7rem;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+}
+
+.loc-meta {
+  pointer-events: none;
+  margin: 0;
+  max-width: min(520px, 70vw);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  padding: 0.55rem 0.85rem;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+}
+
+.btn-ghost {
+  pointer-events: auto;
+  appearance: none;
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+.dock {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  width: var(--dock-width);
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: calc(var(--radius) + 4px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.dock.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(12px);
+}
+.dock-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--chrome-muted);
+}
+.dock-list {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-right: 0.15rem;
+}
+.loc-btn {
+  appearance: none;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--chrome-text);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.loc-btn:hover { background: var(--accent-soft); }
+.loc-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.loc-btn .name { display: block; font-weight: 600; font-size: 0.9rem; }
+.loc-btn .region { display: block; font-size: 0.72rem; color: var(--chrome-muted); margin-top: 0.1rem; }
+
+@media (max-width: 720px) {
+  .dock {
+    top: auto;
+    bottom: 4.2rem;
+    right: 0.6rem;
+    left: 0.6rem;
+    width: auto;
+    max-height: 42vh;
+    transform: none;
+  }
+  .dock.hidden { transform: translateY(8px); }
+  .brand h1 { font-size: 1rem; }
+  .status { display: none; }
+}
