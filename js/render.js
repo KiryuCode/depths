@@ -239,13 +239,6 @@
     ctx.arc(s * 0.3, -s * 0.07, Math.max(0.6, s * 0.025), 0, Math.PI * 2);
     ctx.fill();
 
-    if (f.rare) {
-      ctx.strokeStyle = "rgba(255,220,120,0.5)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
-      ctx.stroke();
-    }
 
     ctx.restore();
   }

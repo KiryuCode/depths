@@ -12,7 +12,7 @@ window.DEPTHS_LOCATIONS = [
     fish: [
       { type: "clownfish", size: [14, 22], speed: [28, 48], count: 8 },
       { type: "angelfish", size: [18, 28], speed: [22, 40], count: 6 },
-      { type: "reef_shark", size: [70, 110], speed: [35, 55], count: 1, rare: true },
+      { type: "reef_shark", size: [70, 110], speed: [35, 55], count: 1 },
       { type: "school_small", size: [8, 12], speed: [40, 70], count: 24, school: true }
     ],
     props: [
