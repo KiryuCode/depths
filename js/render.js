@@ -183,9 +183,14 @@
   function drawFish(ctx, f, t) {
     ctx.save();
     ctx.translate(f.x, f.y);
-    const dir = f.vx >= 0 ? 1 : -1;
-    ctx.scale(dir, 1);
-    const flap = Math.sin(f.flap) * 0.25;
+    const dir = f.facingDir != null ? f.facingDir : (f.vx >= 0 ? 1 : -1);
+    // Dead fish: belly-up (flip vertical), no flap
+    if (f.dead) {
+      ctx.scale(dir, -1);
+    } else {
+      ctx.scale(dir, 1);
+    }
+    const flap = f.dead ? 0 : Math.sin(f.flap) * 0.25;
     const [c0, c1, c2] = f.colors;
     const s = f.size;
 

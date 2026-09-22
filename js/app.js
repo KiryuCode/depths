@@ -19,6 +19,81 @@
   let pendingLoc = null;
   let lastTs = 0;
   let t = 0;
+  let mx = 0, my = 0, pointerIn = false;
+  let hoverFish = null;
+  const CURSOR_CELL = { w: 41, h: 42 };
+  const cursorSheets = { arrows: null, target: null, enemy: null };
+  let cursorFrame = 0, cursorAcc = 0;
+  let cursorsReady = false;
+
+  function loadCursors() {
+    const ids = ["arrows", "target", "enemy"];
+    let left = ids.length;
+    ids.forEach((id) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => {
+        left -= 1;
+        if (left <= 0) cursorsReady = true;
+      };
+      img.src = "assets/cursors/" + id + ".png";
+      cursorSheets[id] = img;
+    });
+  }
+
+  function fishHitRadius(f) {
+    return Math.max(14, f.size * 0.65);
+  }
+
+  function pickFishAt(x, y) {
+    if (!world) return null;
+    // top-most (higher y draw order preference: closest by distance)
+    let best = null, bestD = Infinity;
+    for (const f of world.fish) {
+      if (f.dead) continue;
+      const dx = f.x - x, dy = f.y - y;
+      const d = Math.hypot(dx, dy);
+      const r = fishHitRadius(f);
+      if (d <= r && d < bestD) {
+        best = f;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  function killFish(f) {
+    if (!f || f.dead) return;
+    f.dead = true;
+    f.facingDir = f.vx >= 0 ? 1 : -1;
+    f.vx = 0;
+    f.vy = 0;
+    f.sink = 40 + Math.random() * 50;
+    f.leader = null;
+    statusEl.textContent = "Caught · sinking";
+  }
+
+  function drawCrosshair(ctx) {
+    if (!pointerIn || !cursorsReady) return;
+    const id = hoverFish ? "enemy" : "target";
+    const img = cursorSheets[id] || cursorSheets.target;
+    if (!img || !img.naturalWidth) return;
+    const n = Math.max(1, Math.round(img.naturalWidth / CURSOR_CELL.w));
+    const fr = cursorFrame % n;
+    const scale = 2;
+    const dw = CURSOR_CELL.w * scale;
+    const dh = CURSOR_CELL.h * scale;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    // hotspot ~ (8,8) in sheet coords like darktemplar player
+    ctx.drawImage(
+      img,
+      fr * CURSOR_CELL.w, 0, CURSOR_CELL.w, CURSOR_CELL.h,
+      mx - 8 * scale, my - 8 * scale, dw, dh
+    );
+    ctx.restore();
+  }
+
 
   function applyCssTint(loc, mix) {
     const wt = loc.waterTint;
@@ -108,19 +183,38 @@
     if (!world) return;
 
     for (const f of world.fish) {
+      if (f.dead) {
+        // Flip already applied in draw; sink to floor and stay belly-up
+        const floorY = h - 22 - f.size * 0.15;
+        if (f.y < floorY) {
+          f.y = Math.min(floorY, f.y + f.sink * dt);
+        } else {
+          f.y = floorY;
+          f.sink = 0;
+        }
+        continue;
+      }
       f.flap += dt * (6 + Math.abs(f.vx) * 0.05);
       f.phase += dt;
-      if (f.leader) {
+      if (f.leader && !f.leader.dead) {
         f.x += (f.leader.x + (f.x - f.leader.x) * 0.92 - f.x) * 0.08 + f.vx * dt * 0.15;
         f.y += (f.leader.y + (f.y - f.leader.y) * 0.9 - f.y) * 0.08;
         f.vx = f.leader.vx * 0.95;
       } else {
+        f.leader = null;
         f.x += f.vx * dt;
         f.y += Math.sin(f.phase) * f.vy * dt * 0.4;
       }
       if (f.x > w + 120) f.x = -120;
       if (f.x < -120) f.x = w + 120;
       f.y = R.clamp(f.y, h * 0.08, h * 0.82);
+    }
+    hoverFish = pointerIn ? pickFishAt(mx, my) : null;
+    cursorAcc += dt;
+    const fps = hoverFish ? 12 : 8;
+    while (cursorAcc >= 1 / fps) {
+      cursorAcc -= 1 / fps;
+      cursorFrame += 1;
     }
 
     for (const p of world.props) {
@@ -169,6 +263,7 @@
     }
 
     R.drawFloor(ctx, w, h);
+    drawCrosshair(ctx);
 
     if (fade < 1) {
       ctx.fillStyle = `rgba(4, 16, 24, ${1 - fade})`;
@@ -191,7 +286,34 @@
   });
 
   window.addEventListener("resize", resize);
+
+  canvas.addEventListener("pointermove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mx = e.clientX - rect.left;
+    my = e.clientY - rect.top;
+    pointerIn = true;
+  });
+  canvas.addEventListener("pointerenter", () => { pointerIn = true; });
+  canvas.addEventListener("pointerleave", () => { pointerIn = false; hoverFish = null; });
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    // ignore clicks on chrome — canvas only
+    const rect = canvas.getBoundingClientRect();
+    mx = e.clientX - rect.left;
+    my = e.clientY - rect.top;
+    const hit = pickFishAt(mx, my);
+    if (hit) {
+      killFish(hit);
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") statusEl.textContent = "Looking up · " + current.name;
+  });
+
   buildDock();
+  loadCursors();
   resize();
   applyCssTint(current);
   syncUi(false);

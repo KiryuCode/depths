@@ -219,3 +219,9 @@ html, body {
   .brand h1 { font-size: 1rem; }
   .status { display: none; }
 }
+
+
+/* StarCraft cursors from sprite-sheet-processor (Dark Templar) — hide OS cursor over sea */
+#sea {
+  cursor: none;
+}
